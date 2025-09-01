@@ -465,32 +465,76 @@ USDC Cost: 0.0013 * 2,000 = 2.6 USDC
 
 ---
 
-## 🎯 Next Steps & Extensions
+## 🔥 EIP-7702 Direct Delegation (Advanced)
 
-### Production Deployment
-1. **Mainnet Deployment**: Use mainnet USDC (0xA0b86a33E6441e88C5F2712C3E9b74F6B5e3D8F1)
-2. **Multi-Token Support**: Extend to other stablecoins
-3. **Cross-Chain**: Bridge support for different networks
-4. **Mobile SDK**: React Native/Flutter integration
+The latest implementation supports **true EIP-7702 delegation** where your existing EOA gets "upgraded" to use smart wallet functionality without transferring funds to a separate contract.
 
-### Advanced Features
-1. **Subscription Payments**: Recurring USDC payments
-2. **Limit Orders**: DEX integration with gasless swaps
-3. **Social Recovery**: Multi-sig recovery mechanisms
-4. **Yield Farming**: Auto-compound with gasless txs
+### Phase 1: Deploy Delegated Wallet Contract
 
----
+```bash
+# Deploy the delegated wallet contract
+forge script script/EIP7702DelegationSetup.s.sol \
+  --rpc-url $SEPOLIA_RPC_URL \
+  --broadcast
+```
 
-## 📞 Support
+**Creates:**
+- `EIP7702DelegatedWallet.sol` - Contract designed for EIP-7702 delegation
+- Stores configuration in `./delegations/delegation_[eoa].json`
 
-### Testing Checklist
-- [ ] Contracts deployed successfully
-- [ ] Wallet created with USDC config
-- [ ] Wallet funded with USDC
-- [ ] Gasless transfer executed
-- [ ] Balances updated correctly
-- [ ] Frontend connects and works
-- [ ] Gas fees deducted properly
+### Phase 2: Set Up EIP-7702 Delegation
+
+```bash
+# Configure your EOA for delegation
+export DELEGATED_WALLET=0x_deployed_delegated_wallet_address
+
+forge script script/EIP7702DelegateEOA.s.sol \
+  --rpc-url $SEPOLIA_RPC_URL \
+  --broadcast
+```
+
+**This sets up:**
+- EOA delegation configuration
+- USDC gas payment settings
+- Exchange rate management
+
+### Phase 3: Execute Gasless Transfers
+
+```bash
+# Execute gasless USDC transfers directly from your EOA
+forge script script/EIP7702DelegatedTransfer.s.sol \
+  --rpc-url $SEPOLIA_RPC_URL \
+  --broadcast
+```
+
+### Key Advantages of Direct Delegation:
+
+✅ **No Fund Transfer Required** - Works directly with EOA's USDC balance
+✅ **Maintains EOA Functionality** - Can still use regular ETH transactions
+✅ **True EIP-7702** - Uses actual delegation mechanism
+✅ **Seamless Experience** - No separate wallet management
+✅ **Backward Compatible** - Existing EOA tools still work
+
+### How It Works:
+
+```
+Before: EOA → Transfer USDC → Smart Wallet → Gasless Transfer
+After:  EOA (with delegation) → Direct Gasless Transfer
+```
+
+### Type 4 Transaction Example:
+
+```javascript
+// EIP-7702 Type 4 transaction structure
+{
+  type: 4,                    // EIP-7702 transaction type
+  to: "0x_your_eoa_address", // The EOA being delegated
+  delegation: "0x_delegated_wallet_contract", // Smart wallet code
+  data: "0x",                // Empty for basic delegation
+  gasLimit: 100000,
+  gasPrice: "20000000000"
+}
+```
 
 ### Useful Links
 - [EIP-7702 Specification](https://eips.ethereum.org/EIPS/eip-7702)
@@ -498,6 +542,3 @@ USDC Cost: 0.0013 * 2,000 = 2.6 USDC
 - [Sepolia Faucet](https://sepoliafaucet.com/)
 - [Foundry Documentation](https://book.getfoundry.sh/)
 
----
-
-**🎉 Congratulations!** You now have a fully functional EIP-7702 gasless USDC transfer system. Users can send USDC with gas fees paid in USDC, enabling true gasless transactions without requiring ETH in their wallets.
