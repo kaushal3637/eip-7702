@@ -6,10 +6,10 @@ import "../src/factories/EIP7702WalletFactory.sol";
 import "../src/wallets/EIP7702Wallet.sol";
 
 /**
- * @title CreateWallet
- * @dev Script to create a new EIP-7702 wallet
+ * @title CreateWalletWithUSDC
+ * @dev Script to create a new EIP-7702 wallet with USDC gasless configuration
  */
-contract CreateWallet is Script {
+contract CreateWalletWithUSDC is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);
@@ -21,22 +21,19 @@ contract CreateWallet is Script {
             "WALLET_FACTORY environment variable not set"
         );
 
-        // Get owner address (default to deployer)
+        // Configuration
         address owner = vm.envOr("WALLET_OWNER", deployer);
-        require(
-            owner != deployer,
-            "WALLET_OWNER environment variable not set"
-        );
-        // Get salt (default to timestamp)
+        address usdcToken = vm.envOr("USDC_TOKEN", address(0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8));
+        address gasSponsor = vm.envOr("GAS_SPONSOR", deployer); // Who receives gas fees
+        uint256 exchangeRate = vm.envOr("EXCHANGE_RATE", uint256(2000 * 1e18)); // 4000 USDC per ETH
         uint256 salt = vm.envOr("WALLET_SALT", uint256(block.timestamp));
-        require(
-            salt != 0,
-            "WALLET_SALT environment variable not set"
-        );
 
-        console.log("Creating wallet with:");
+        console.log("Creating EIP-7702 wallet with USDC gasless configuration:");
         console.log("Factory:", factoryAddress);
         console.log("Owner:", owner);
+        console.log("USDC Token:", usdcToken);
+        console.log("Gas Sponsor:", gasSponsor);
+        console.log("Exchange Rate:", exchangeRate / 1e18, "USDC per ETH");
         console.log("Salt:", salt);
 
         vm.startBroadcast(deployerPrivateKey);
@@ -49,6 +46,31 @@ contract CreateWallet is Script {
 
         if (walletExists) {
             console.log("Wallet already exists at:", predictedWallet);
+
+            // Get existing wallet and update configuration if needed
+            EIP7702Wallet wallet = EIP7702Wallet(payable(predictedWallet));
+
+            // Check current configuration
+            (address currentUSDC, address currentSponsor, uint256 currentRate) = wallet.getUSDCConfig();
+
+            console.log("Current USDC config:");
+            console.log("USDC Token:", currentUSDC);
+            console.log("Gas Sponsor:", currentSponsor);
+            console.log("Exchange Rate:", currentRate / 1e18, "USDC per ETH");
+
+            // Update configuration if different
+            if (currentUSDC != usdcToken) {
+                console.log("USDC token mismatch - wallet already configured");
+            }
+            if (currentSponsor != gasSponsor) {
+                console.log("Updating gas sponsor...");
+                wallet.updateGasSponsor(gasSponsor);
+            }
+            if (currentRate != exchangeRate) {
+                console.log("Updating exchange rate...");
+                wallet.updateExchangeRate(exchangeRate);
+            }
+
         } else {
             // Create the wallet
             address wallet = factory.createWallet(owner, salt);
@@ -67,20 +89,38 @@ contract CreateWallet is Script {
                 "Delegation support verification failed"
             );
 
-            console.log("Wallet verification passed");
+            // Configure USDC settings
+            console.log("Configuring USDC gasless settings...");
+            walletContract.updateGasSponsor(gasSponsor);
+            walletContract.updateExchangeRate(exchangeRate);
+
+            // Verify configuration
+            (address configuredUSDC, address configuredSponsor, uint256 configuredRate) = walletContract.getUSDCConfig();
+            require(configuredUSDC == usdcToken, "USDC configuration failed");
+            require(configuredSponsor == gasSponsor, "Gas sponsor configuration failed");
+            require(configuredRate == exchangeRate, "Exchange rate configuration failed");
+
+            console.log("USDC configuration verified successfully");
+
+            // Test gas fee estimation
+            uint256 estimatedFee = walletContract.estimateGasFee();
+            console.log("Estimated gas fee for USDC transfer:", estimatedFee / 1e6, "USDC");
         }
 
         vm.stopBroadcast();
 
         // Save wallet info
-        saveWalletInfo(predictedWallet, owner, salt, factoryAddress);
+        saveWalletInfo(predictedWallet, owner, salt, factoryAddress, usdcToken, gasSponsor, exchangeRate);
     }
 
     function saveWalletInfo(
         address wallet,
         address owner,
         uint256 salt,
-        address factory
+        address factory,
+        address usdcToken,
+        address gasSponsor,
+        uint256 exchangeRate
     ) internal {
         string memory json = string(
             abi.encodePacked(
@@ -96,6 +136,15 @@ contract CreateWallet is Script {
                 ",\n",
                 '  "factory": "',
                 vm.toString(factory),
+                '",\n',
+                '  "usdcToken": "',
+                vm.toString(usdcToken),
+                '",\n',
+                '  "gasSponsor": "',
+                vm.toString(gasSponsor),
+                '",\n',
+                '  "exchangeRate": "',
+                vm.toString(exchangeRate),
                 '",\n',
                 '  "network": "',
                 getNetworkName(),

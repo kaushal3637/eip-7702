@@ -12,3 +12,5 @@ docs/
 
 # Dotenv file
 .env
+.env.*
+EIP7702_GASLESS_SETUP.md

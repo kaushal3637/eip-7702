@@ -12,11 +12,10 @@ import "../src/paymasters/USDCPaymaster.sol";
  */
 contract Deploy is Script {
     // Sepolia EntryPoint address (official ERC-4337 EntryPoint v0.8)
-    address constant SEPOLIA_ENTRYPOINT =
-        0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108;
+    address SEPOLIA_ENTRYPOINT = vm.envAddress("SEPOLIA_ENTRYPOINT");
 
     // Sepolia USDC address
-    address constant SEPOLIA_USDC = 0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8;
+    address SEPOLIA_USDC = vm.envAddress("SEPOLIA_USDC");
 
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
@@ -42,7 +41,7 @@ contract Deploy is Script {
         console.log("WalletFactory deployed at:", address(walletFactory));
 
         // Deploy the USDC paymaster
-        // Initial exchange rate: 1 ETH = 4000 USDC (2000 * 1e18)
+        // Exchange rate: 1 ETH = 4000 USDC
         uint256 initialExchangeRate = 4000 * 1e18;
 
         USDCPaymaster usdcPaymaster = new USDCPaymaster(
@@ -54,8 +53,8 @@ contract Deploy is Script {
 
         console.log("USDCPaymaster deployed at:", address(usdcPaymaster));
 
-        // Add stake to the paymaster (0.1 ETH)
-        uint256 stakeAmount = 0.1 ether;
+        // Add stake to the paymaster
+        uint256 stakeAmount = 0.01 ether;
         if (deployer.balance >= stakeAmount) {
             usdcPaymaster.addStake{value: stakeAmount}(1 days);
             console.log("Added stake to paymaster:", stakeAmount);
@@ -63,7 +62,7 @@ contract Deploy is Script {
             console.log("Insufficient balance to add stake");
         }
 
-        // Deposit some ETH to the paymaster for gas sponsorship
+        // Deposit ETH to the paymaster for gas sponsorship
         uint256 depositAmount = 0.05 ether;
         if (deployer.balance >= depositAmount) {
             IEntryPoint(entryPoint).depositTo{value: depositAmount}(
@@ -99,6 +98,7 @@ contract Deploy is Script {
 
     function getNetworkAddresses()
         internal
+        view
         returns (address entryPoint, address usdcToken)
     {
         uint256 chainId = block.chainid;

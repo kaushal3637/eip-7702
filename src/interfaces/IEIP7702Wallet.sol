@@ -33,6 +33,26 @@ interface IEIP7702Wallet is IAccount {
     event TransactionExecuted(address indexed target, uint256 value, bytes data, bool success);
 
     /**
+     * @dev Emitted when a USDC transfer with gas payment is executed
+     * @param recipient The recipient address
+     * @param amount The USDC amount transferred
+     * @param gasFeeAmount The gas fee amount deducted in USDC
+     */
+    event USDCTransferExecuted(address indexed recipient, uint256 amount, uint256 gasFeeAmount);
+
+    /**
+     * @dev Emitted when exchange rate is updated
+     * @param newRate The new exchange rate
+     */
+    event ExchangeRateUpdated(uint256 newRate);
+
+    /**
+     * @dev Emitted when gas sponsor is updated
+     * @param newSponsor The new gas sponsor address
+     */
+    event GasSponsorUpdated(address indexed newSponsor);
+
+    /**
      * @dev Initialize the wallet with an owner
      * @param owner The owner of the wallet
      */
@@ -59,6 +79,48 @@ interface IEIP7702Wallet is IAccount {
         uint256[] calldata values,
         bytes[] calldata datas
     ) external returns (bool[] memory successes, bytes[] memory returnDatas);
+
+    /**
+     * @dev Execute USDC transfer with gas fees paid in USDC
+     * @param recipient The recipient address
+     * @param amount The USDC amount to transfer
+     * @param gasFeeAmount The gas fee amount in USDC to deduct
+     */
+    function executeUSDCTransfer(
+        address recipient,
+        uint256 amount,
+        uint256 gasFeeAmount
+    ) external;
+
+    /**
+     * @dev Estimate gas fee for USDC transfer
+     * @return Estimated gas fee in USDC (6 decimals)
+     */
+    function estimateGasFee() external view returns (uint256);
+
+    /**
+     * @dev Get USDC configuration
+     * @return usdcToken The USDC token address
+     * @return gasSponsor The gas sponsor address
+     * @return exchangeRate The USDC/ETH exchange rate
+     */
+    function getUSDCConfig() external view returns (
+        address usdcToken,
+        address gasSponsor,
+        uint256 exchangeRate
+    );
+
+    /**
+     * @dev Update USDC exchange rate (only owner)
+     * @param newRate The new exchange rate
+     */
+    function updateExchangeRate(uint256 newRate) external;
+
+    /**
+     * @dev Update gas sponsor address (only owner)
+     * @param newSponsor The new gas sponsor address
+     */
+    function updateGasSponsor(address newSponsor) external;
 
     /**
      * @dev Get the current owner of the wallet
