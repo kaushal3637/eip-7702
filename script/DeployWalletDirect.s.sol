@@ -4,7 +4,6 @@ pragma solidity ^0.8.28;
 import "forge-std/Script.sol";
 import "@account-abstraction/interfaces/IEntryPoint.sol";
 import "../src/wallets/EIP7702Wallet.sol";
-import "../src/utils/MockUSDC.sol";
 
 /**
  * @title DeployWalletDirect
@@ -49,14 +48,9 @@ contract DeployWalletDirect is Script {
         IERC20 usdc = IERC20(usdcAddress);
         uint256 usdcBalance = usdc.balanceOf(address(wallet));
         console.log("Initial USDC balance:", usdcBalance);
-        
-        // Try to get some USDC from faucet
-        try MockUSDC(usdcAddress).faucet(address(wallet)) {
-            uint256 newBalance = usdc.balanceOf(address(wallet));
-            console.log("After faucet USDC balance:", newBalance);
-        } catch {
-            console.log("Could not use faucet (might be real USDC)");
-        }
+
+        // Note: For real USDC, you need to fund the wallet manually
+        console.log("To fund wallet with USDC, transfer tokens to:", address(wallet));
         
         vm.stopBroadcast();
         

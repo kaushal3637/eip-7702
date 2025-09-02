@@ -3,7 +3,6 @@ pragma solidity ^0.8.28;
 
 import "forge-std/Script.sol";
 import "../src/wallets/EIP7702Wallet.sol";
-import "../src/utils/MockUSDC.sol";
 
 /**
  * @title TransferUSDC
